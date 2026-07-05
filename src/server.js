@@ -1,13 +1,19 @@
 require('dotenv').config();
 
 const app = require('./app');
+const { initializeDatabase } = require('./config/db');
 
 const port = process.env.PORT || 3000;
 
-app.get('/', (req, res) => {
-  res.send('Hello World!');
-});
+async function startServer() {
+  await initializeDatabase();
 
-app.listen(port, () => {
-  console.log(`Server is running on port ${port}`);
+  app.listen(port, () => {
+    console.log(`Server is running on port ${port}`);
+  });
+}
+
+startServer().catch((error) => {
+  console.error('Failed to start server:', error.message);
+  process.exit(1);
 });
