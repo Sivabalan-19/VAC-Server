@@ -4,6 +4,7 @@ const cors = require('cors');
 const authRoutes = require('./routes/route');
 const studentRoutes = require('./routes/studentRoutes');
 const adminRoutes = require('./routes/adminRoutes');
+const facultyRoutes = require('./routes/facultyRoutes');
 const { notFound, errorHandler } = require('./middlewares/middleware');
 
 const app = express();
@@ -27,6 +28,7 @@ app.get('/health', (req, res) => {
 app.use('/api/auth', authRoutes);
 app.use('/api/students', studentRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/faculty', facultyRoutes);
 
 app.use(notFound);
 app.use(errorHandler);

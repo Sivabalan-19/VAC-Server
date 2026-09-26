@@ -151,6 +151,64 @@ async function adminMarkAllPresent(req, res, next) {
 	}
 }
 
+async function facultyDashboard(req, res, next) {
+	try {
+		res.json({ dashboard: await adminService.getDashboard() });
+	} catch (error) {
+		next(error);
+	}
+}
+
+async function facultyListCourses(req, res, next) {
+	try {
+		res.json({ courses: await adminService.listCourses(req.query) });
+	} catch (error) {
+		next(error);
+	}
+}
+
+async function facultyGetCourse(req, res, next) {
+	try {
+		res.json({ course: await adminService.getCourse(req.params.courseId) });
+	} catch (error) {
+		next(error);
+	}
+}
+
+async function facultyCreateCourse(req, res, next) {
+	try {
+		res.status(201).json({ message: 'Course proposal created successfully', course: await adminService.createCourse(req.body) });
+	} catch (error) {
+		next(error);
+	}
+}
+
+async function facultyListRoster(req, res, next) {
+	try {
+		res.json({ students: await adminService.listRoster(req.params.courseId) });
+	} catch (error) {
+		next(error);
+	}
+}
+
+async function facultyUpdateAttendance(req, res, next) {
+	try {
+		const attendance = await adminService.updateAttendance(req.params.courseId, req.params.studentId, req.body.status);
+		res.json({ message: 'Attendance updated successfully', attendance });
+	} catch (error) {
+		next(error);
+	}
+}
+
+async function facultyMarkAllPresent(req, res, next) {
+	try {
+		const records = await adminService.markAllPresent(req.params.courseId);
+		res.json({ message: 'All enrolled students marked present', updated: records.length });
+	} catch (error) {
+		next(error);
+	}
+}
+
 module.exports = {
 	login,
 	me,
@@ -169,4 +227,11 @@ module.exports = {
 	adminListRoster,
 	adminUpdateAttendance,
 	adminMarkAllPresent,
+	facultyDashboard,
+	facultyListCourses,
+	facultyGetCourse,
+	facultyCreateCourse,
+	facultyListRoster,
+	facultyUpdateAttendance,
+	facultyMarkAllPresent,
 };

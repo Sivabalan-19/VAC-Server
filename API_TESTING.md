@@ -528,3 +528,156 @@ Allowed values are `Present` and `Absent`. The operation is an upsert, so it can
 | `GET` | `/api/admin/courses/:courseId/students` | Admin |
 | `PATCH` | `/api/admin/courses/:courseId/students/:studentId/attendance` | Admin |
 | `POST` | `/api/admin/courses/:courseId/attendance/mark-all-present` | Admin |
+
+## Faculty API
+
+Register or log in with an account whose role is `faculty`, then copy its token and replace `FACULTY_TOKEN` below.
+
+Faculty endpoints use the same course object, roster object, status values, and attendance values documented for admin endpoints. Faculty access is role-protected and does not require an admin token.
+
+### Faculty Dashboard
+
+```bash
+curl --location 'http://localhost:5000/api/faculty/dashboard' \
+--header 'Authorization: Bearer FACULTY_TOKEN'
+```
+
+Response:
+
+```json
+{
+  "dashboard": {
+    "totalCourses": 5,
+    "pendingCourses": 2,
+    "activeCourses": 2,
+    "totalStudents": 224,
+    "uniqueInstructors": 5
+  }
+}
+```
+
+### Faculty Course List
+
+```bash
+curl --location 'http://localhost:5000/api/faculty/courses' \
+--header 'Authorization: Bearer FACULTY_TOKEN'
+```
+
+The list accepts the same optional query parameters as admin course listing:
+
+```text
+status    Case-insensitive status search, for example Pending
+search    Searches name, code, instructor, department, and category
+mode      Online, Offline, or Hybrid
+category  Exact category name
+```
+
+Example:
+
+```bash
+curl --location 'http://localhost:5000/api/faculty/courses?search=AI&mode=Online' \
+--header 'Authorization: Bearer FACULTY_TOKEN'
+```
+
+### Faculty My Events Alias
+
+The faculty My Events page can use the equivalent endpoint:
+
+```bash
+curl --location 'http://localhost:5000/api/faculty/events' \
+--header 'Authorization: Bearer FACULTY_TOKEN'
+```
+
+### Create Faculty Course Proposal
+
+```bash
+curl --location 'http://localhost:5000/api/faculty/courses' \
+--header 'Authorization: Bearer FACULTY_TOKEN' \
+--header 'Content-Type: application/json' \
+--data-raw '{
+  "name": "AI Technology and Industrial Revolution",
+  "code": "VAC-AI-101",
+  "type": "Webinar",
+  "category": "Artificial Intelligence",
+  "mode": "Online",
+  "instructor": "Dr. Sarah Connor",
+  "department": "Computer Science & Engineering",
+  "maxIntake": 60,
+  "credits": 2,
+  "details": "Webinar explaining industrial integrations with generative AI models.",
+  "imageUrl": "https://example.com/course-image.jpg",
+  "regStartDate": "2026-08-15",
+  "regEndDate": "2026-08-25",
+  "startDate": "2026-08-28T10:00:00Z",
+  "endDate": "2026-08-29T17:00:00Z",
+  "location": "Google Meet / Lab 304"
+}'
+```
+
+`mode` must be `Online`, `Offline`, or `Hybrid`. `name`, `code`, `instructor`, and `department` are required. `organizer` is optional and defaults to `instructor`. `statusText` defaults to `Approval Pending...`.
+
+Successful response:
+
+```json
+{
+  "message": "Course proposal created successfully",
+  "course": {
+    "id": 6,
+    "name": "AI Technology and Industrial Revolution",
+    "code": "VAC-AI-101",
+    "statusText": "Approval Pending...",
+    "registeredCount": 0,
+    "attendedCount": 0
+  }
+}
+```
+
+### Faculty Course Details
+
+Replace `COURSE_ID` with an ID from the course list:
+
+```bash
+curl --location 'http://localhost:5000/api/faculty/courses/COURSE_ID' \
+--header 'Authorization: Bearer FACULTY_TOKEN'
+```
+
+### Faculty Student Roster
+
+```bash
+curl --location 'http://localhost:5000/api/faculty/courses/COURSE_ID/students' \
+--header 'Authorization: Bearer FACULTY_TOKEN'
+```
+
+The response is `{ "students": [...] }`. Each student includes `id`, `studentName`, `rollNo`, `department`, `year`, `email`, `registeredDate`, `attendanceStatus`, and `markedTime`.
+
+### Update Faculty Attendance
+
+Replace `STUDENT_ID` with a roster student ID:
+
+```bash
+curl --location --request PATCH 'http://localhost:5000/api/faculty/courses/COURSE_ID/students/STUDENT_ID/attendance' \
+--header 'Authorization: Bearer FACULTY_TOKEN' \
+--header 'Content-Type: application/json' \
+--data-raw '{
+  "status": "Present"
+}'
+```
+
+Allowed status values are `Present` and `Absent`. Attendance updates are upserts.
+
+### Mark All Faculty Students Present
+
+```bash
+curl --location --request POST 'http://localhost:5000/api/faculty/courses/COURSE_ID/attendance/mark-all-present' \
+--header 'Authorization: Bearer FACULTY_TOKEN'
+```
+
+### Faculty Frontend Flow
+
+1. Log in with a faculty account and store the returned JWT.
+2. Load `/api/faculty/dashboard` for dashboard metrics.
+3. Load `/api/faculty/courses` for the faculty course list and filters.
+4. Load `/api/faculty/courses/:courseId` and `/students` for the detail page.
+5. Use the attendance PATCH endpoint when a Present/Absent control changes.
+6. Use the bulk attendance endpoint for “Mark All Present”.
+7. Refetch the affected course or roster after each mutation.
