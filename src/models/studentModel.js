@@ -3,7 +3,8 @@ const { query } = require('../config/db');
 async function findAvailableCourses(studentId) {
 	return query(
 		`SELECT c.id, TO_CHAR(c.course_date, 'DD/MM/YYYY') AS date, c.name,
-			c.course_type AS type, c.mode, c.credit, c.organizer,
+			c.code, c.instructor, c.department, c.course_type AS type, c.mode, c.credit, c.organizer,
+			c.location,
 			c.capacity - COUNT(e.id) FILTER (WHERE e.status IN ('Registered', 'Completed')) AS available,
 			c.details
 		 FROM courses c
@@ -21,7 +22,8 @@ async function findAvailableCourses(studentId) {
 async function findMyCourses(studentId) {
 	return query(
 		`SELECT c.id, TO_CHAR(c.course_date, 'DD/MM/YYYY') AS date, c.name,
-			c.course_type AS type, c.mode, c.credit, c.organizer, e.status, c.details
+			c.code, c.instructor, c.department, c.course_type AS type, c.mode, c.credit, c.organizer,
+			c.location, e.status, c.details
 		 FROM courses c
 		 JOIN course_enrollments e ON e.course_id = c.id
 		 WHERE e.student_id = $1 AND e.status <> 'Cancelled'
@@ -32,11 +34,18 @@ async function findMyCourses(studentId) {
 
 async function findCompletedCourses(studentId) {
 	return query(
-		`SELECT c.id, c.name, c.course_type AS type, c.mode, c.credit, c.organizer,
-			TO_CHAR(e.completed_at, 'DD Mon YYYY') AS "completedOn"
+		`SELECT c.id, c.name, c.code, c.instructor, c.department, c.course_type AS type, c.mode, c.credit, c.organizer,
+			c.location,
+			TO_CHAR(e.completed_at, 'DD Mon YYYY') AS "completedOn",
+			CASE
+				WHEN COUNT(ar.id) = 0 THEN 100
+				ELSE ROUND((COUNT(ar.id) FILTER (WHERE ar.status = 'Present')::numeric / COUNT(ar.id)::numeric) * 100)::int
+			END AS "attendancePercentage"
 		 FROM courses c
 		 JOIN course_enrollments e ON e.course_id = c.id
+		 LEFT JOIN attendance_records ar ON ar.course_id = c.id AND ar.student_id = e.student_id
 		 WHERE e.student_id = $1 AND e.status = 'Completed'
+		 GROUP BY c.id, e.id
 		 ORDER BY e.completed_at DESC NULLS LAST, e.id DESC`,
 		[studentId]
 	);

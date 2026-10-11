@@ -15,7 +15,14 @@ async function createUser({ fullName, email, passwordHash, role, facultyType = n
 
 async function findUserByEmail(email) {
 	const rows = await query(
-		'SELECT id, full_name AS "fullName", email, password_hash AS "passwordHash", role, faculty_type AS "facultyType", created_at AS "createdAt" FROM users WHERE email = $1 LIMIT 1',
+		`SELECT id, full_name AS "fullName", email, roll_no AS "rollNo", department, password_hash AS "passwordHash", role, faculty_type AS "facultyType", created_at AS "createdAt"
+		 FROM users
+		 WHERE LOWER(email) = LOWER($1)
+		    OR LOWER(roll_no) = LOWER($1)
+		    OR LOWER(email) = LOWER($1 || '@example.com')
+		    OR LOWER(email) LIKE LOWER($1 || '@%')
+		 ORDER BY id ASC
+		 LIMIT 1`,
 		[email]
 	);
 
