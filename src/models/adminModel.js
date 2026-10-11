@@ -118,15 +118,21 @@ async function createCourse(course) {
 }
 
 async function updateCourseStatus(courseId, statusText, rejectionReason) {
+	let currentStep = 3;
+	const lower = String(statusText || "").toLowerCase();
+	if (lower.includes("pending") || lower.includes("reject")) {
+		currentStep = 1;
+	} else if (lower.includes("completed")) {
+		currentStep = 4;
+	}
+
 	const rows = await query(
-		`UPDATE courses SET status_text = $2, current_step = CASE
-			WHEN $2 ILIKE '%Pending%' THEN 1
-			WHEN $2 ILIKE '%Reject%' THEN 1
-			WHEN $2 ILIKE '%Completed%' THEN 4
-			ELSE 3 END,
-			rejection_reason = $3
+		`UPDATE courses SET
+			status_text = $2,
+			current_step = $3,
+			rejection_reason = $4
 		 WHERE id = $1 RETURNING id`,
-		[courseId, statusText, rejectionReason || null]
+		[courseId, statusText, currentStep, rejectionReason || null]
 	);
 	return rows[0] || null;
 }
