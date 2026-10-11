@@ -40,7 +40,6 @@ const corsOptions = {
 app.disable('x-powered-by');
 
 app.use(cors(corsOptions));
-app.options('*', cors(corsOptions));
 app.use(express.json());
 
 app.get('/health', (req, res) => {
