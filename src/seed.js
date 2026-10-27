@@ -373,9 +373,9 @@ async function seedDatabase() {
   for (const a of attendanceRecords) {
     if (a.courseId && a.studentId) {
       await pool.query(
-        `INSERT INTO attendance_records (course_id, student_id, status)
-         VALUES ($1, $2, $3)
-         ON CONFLICT (course_id, student_id) DO UPDATE SET
+        `INSERT INTO attendance_records (course_id, student_id, session_id, status)
+         VALUES ($1, $2, 'd1s1', $3)
+         ON CONFLICT (course_id, student_id, session_id) DO UPDATE SET
            status = EXCLUDED.status`,
         [a.courseId, a.studentId, a.status]
       );

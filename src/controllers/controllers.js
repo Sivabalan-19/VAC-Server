@@ -127,7 +127,7 @@ async function adminUpdateStatus(req, res, next) {
 
 async function adminListRoster(req, res, next) {
 	try {
-		res.json({ students: await adminService.listRoster(req.params.courseId) });
+		res.json({ students: await adminService.listRoster(req.params.courseId, 'd1s1') });
 	} catch (error) {
 		next(error);
 	}
@@ -135,7 +135,12 @@ async function adminListRoster(req, res, next) {
 
 async function adminUpdateAttendance(req, res, next) {
 	try {
-		const attendance = await adminService.updateAttendance(req.params.courseId, req.params.studentId, req.body.status);
+		const attendance = await adminService.updateAttendance(
+			req.params.courseId,
+			req.params.studentId,
+			req.body?.status,
+			req.body?.sessionId || 'd1s1'
+		);
 		res.json({ message: 'Attendance updated successfully', attendance });
 	} catch (error) {
 		next(error);
@@ -144,7 +149,7 @@ async function adminUpdateAttendance(req, res, next) {
 
 async function adminMarkAllPresent(req, res, next) {
 	try {
-		const records = await adminService.markAllPresent(req.params.courseId);
+		const records = await adminService.markAllPresent(req.params.courseId, req.body?.sessionId || 'd1s1');
 		res.json({ message: 'All enrolled students marked present', updated: records.length });
 	} catch (error) {
 		next(error);
@@ -185,7 +190,7 @@ async function facultyCreateCourse(req, res, next) {
 
 async function facultyListRoster(req, res, next) {
 	try {
-		res.json({ students: await adminService.listRoster(req.params.courseId) });
+		res.json({ students: await adminService.listRoster(req.params.courseId, req.query.sessionId) });
 	} catch (error) {
 		next(error);
 	}
@@ -193,7 +198,12 @@ async function facultyListRoster(req, res, next) {
 
 async function facultyUpdateAttendance(req, res, next) {
 	try {
-		const attendance = await adminService.updateAttendance(req.params.courseId, req.params.studentId, req.body.status);
+		const attendance = await adminService.updateAttendance(
+			req.params.courseId,
+			req.params.studentId,
+			req.body?.status,
+			req.body?.sessionId
+		);
 		res.json({ message: 'Attendance updated successfully', attendance });
 	} catch (error) {
 		next(error);
@@ -202,7 +212,7 @@ async function facultyUpdateAttendance(req, res, next) {
 
 async function facultyMarkAllPresent(req, res, next) {
 	try {
-		const records = await adminService.markAllPresent(req.params.courseId);
+		const records = await adminService.markAllPresent(req.params.courseId, req.body?.sessionId);
 		res.json({ message: 'All enrolled students marked present', updated: records.length });
 	} catch (error) {
 		next(error);
