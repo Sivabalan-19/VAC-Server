@@ -79,7 +79,7 @@ async function findCourse(courseId) {
 	return rows[0] || null;
 }
 
-async function findRoster(courseId) {
+async function findRoster(courseId, sessionId) {
 	return query(
 		`SELECT u.id, u.full_name AS "studentName", u.roll_no AS "rollNo",
 			u.department, u.academic_year AS year, u.email,
@@ -91,10 +91,11 @@ async function findRoster(courseId) {
 			(e.status = 'Completed') AS "creditsAwarded"
 		 FROM course_enrollments e
 		 JOIN users u ON u.id = e.student_id
-		 LEFT JOIN attendance_records a ON a.course_id = e.course_id AND a.student_id = e.student_id
+		 LEFT JOIN attendance_records a ON a.course_id = e.course_id
+			AND a.student_id = e.student_id AND a.session_id = $2
 		 WHERE e.course_id = $1 AND e.status IN ('Registered', 'Completed')
 		 ORDER BY e.created_at, u.full_name`,
-		[courseId]
+		[courseId, sessionId]
 	);
 }
 
@@ -166,25 +167,25 @@ async function updateCourseStatus(courseId, statusText, rejectionReason) {
 	return rows[0] || null;
 }
 
-async function updateAttendance(courseId, studentId, status) {
+async function updateAttendance(courseId, studentId, status, sessionId) {
 	const rows = await query(
-		`INSERT INTO attendance_records (course_id, student_id, status)
-		 VALUES ($1, $2, $3)
-		 ON CONFLICT (course_id, student_id) DO UPDATE SET status = $3, marked_at = NOW()
+		`INSERT INTO attendance_records (course_id, student_id, session_id, status)
+		 VALUES ($1, $2, $3, $4)
+		 ON CONFLICT (course_id, student_id, session_id) DO UPDATE SET status = $4, marked_at = NOW()
 		 RETURNING status, marked_at AS "markedTime"`,
-		[courseId, studentId, status]
+		[courseId, studentId, sessionId, status]
 	);
 	return rows[0] || null;
 }
 
-async function markAllPresent(courseId) {
+async function markAllPresent(courseId, sessionId) {
 	return query(
-		`INSERT INTO attendance_records (course_id, student_id, status)
-		 SELECT $1, student_id, 'Present' FROM course_enrollments
+		`INSERT INTO attendance_records (course_id, student_id, session_id, status)
+		 SELECT $1, student_id, $2, 'Present' FROM course_enrollments
 		 WHERE course_id = $1 AND status IN ('Registered', 'Completed')
-		 ON CONFLICT (course_id, student_id) DO UPDATE SET status = 'Present', marked_at = NOW()
+		 ON CONFLICT (course_id, student_id, session_id) DO UPDATE SET status = 'Present', marked_at = NOW()
 		 RETURNING student_id`,
-		[courseId]
+		[courseId, sessionId]
 	);
 }
 

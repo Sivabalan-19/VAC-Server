@@ -1,4 +1,5 @@
 const adminModel = require('../models/adminModel');
+const SESSION_IDS = new Set(['d1s1', 'd1s2', 'd2s1', 'd2s2']);
 
 function requireId(value, label) {
 	const id = Number(value);
@@ -17,6 +18,21 @@ function required(value, label) {
 		throw error;
 	}
 	return value;
+}
+
+function requireSessionId(value) {
+	if (typeof value !== 'string' || value.trim() === '') {
+		const error = new Error('sessionId is required');
+		error.status = 400;
+		throw error;
+	}
+	const sessionId = value.trim();
+	if (!SESSION_IDS.has(sessionId)) {
+		const error = new Error('sessionId must be one of d1s1, d1s2, d2s1, or d2s2');
+		error.status = 400;
+		throw error;
+	}
+	return sessionId;
 }
 
 async function getCourse(courseId) {
@@ -76,7 +92,7 @@ async function updateStatus(courseId, body) {
 	return adminModel.findCourse(id);
 }
 
-async function updateAttendance(courseId, studentId, status) {
+async function updateAttendance(courseId, studentId, status, sessionId) {
 	const id = requireId(courseId, 'courseId');
 	const student = requireId(studentId, 'studentId');
 	if (!['Present', 'Absent'].includes(status)) {
@@ -84,7 +100,7 @@ async function updateAttendance(courseId, studentId, status) {
 		error.status = 400;
 		throw error;
 	}
-	const result = await adminModel.updateAttendance(id, student, status);
+	const result = await adminModel.updateAttendance(id, student, status, requireSessionId(sessionId));
 	if (!result) {
 		const error = new Error('Enrollment not found');
 		error.status = 404;
@@ -100,8 +116,10 @@ module.exports = {
 	getCourse,
 	getDashboard: adminModel.getDashboard,
 	listCourses: adminModel.listCourses,
-	listRoster: async (courseId) => adminModel.findRoster(requireId(courseId, 'courseId')),
-	markAllPresent: async (courseId) => adminModel.markAllPresent(requireId(courseId, 'courseId')),
+	listRoster: async (courseId, sessionId) =>
+		adminModel.findRoster(requireId(courseId, 'courseId'), requireSessionId(sessionId)),
+	markAllPresent: async (courseId, sessionId) =>
+		adminModel.markAllPresent(requireId(courseId, 'courseId'), requireSessionId(sessionId)),
 	updateAttendance,
 	updateStatus,
 };

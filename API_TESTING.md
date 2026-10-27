@@ -644,11 +644,11 @@ curl --location 'http://localhost:5000/api/faculty/courses/COURSE_ID' \
 ### Faculty Student Roster
 
 ```bash
-curl --location 'http://localhost:5000/api/faculty/courses/COURSE_ID/students' \
+curl --location 'http://localhost:5000/api/faculty/courses/COURSE_ID/students?sessionId=d1s1' \
 --header 'Authorization: Bearer FACULTY_TOKEN'
 ```
 
-The response is `{ "students": [...] }`. Each student includes `id`, `studentName`, `rollNo`, `department`, `year`, `email`, `registeredDate`, `attendanceStatus`, and `markedTime`.
+The response is `{ "students": [...] }`. Each student includes `id`, `studentName`, `rollNo`, `department`, `year`, `email`, `registeredDate`, `attendanceStatus`, and `markedTime`. `sessionId` is required and identifies the session whose attendance is returned.
 
 ### Update Faculty Attendance
 
@@ -659,16 +659,20 @@ curl --location --request PATCH 'http://localhost:5000/api/faculty/courses/COURS
 --header 'Authorization: Bearer FACULTY_TOKEN' \
 --header 'Content-Type: application/json' \
 --data-raw '{
+  "sessionId": "d1s1",
   "status": "Present"
 }'
 ```
 
-Allowed status values are `Present` and `Absent`. Attendance updates are upserts.
+Allowed status values are `Present` and `Absent`. `sessionId` is required. Attendance is upserted for that course, student, and session only.
 
 ### Mark All Faculty Students Present
+Send the selected `sessionId` in the JSON body; for example, `{"sessionId":"d1s1"}`. This marks only that session.
 
 ```bash
 curl --location --request POST 'http://localhost:5000/api/faculty/courses/COURSE_ID/attendance/mark-all-present' \
+--header 'Content-Type: application/json' \
+--data-raw '{"sessionId":"d1s1"}' \
 --header 'Authorization: Bearer FACULTY_TOKEN'
 ```
 
@@ -677,7 +681,7 @@ curl --location --request POST 'http://localhost:5000/api/faculty/courses/COURSE
 1. Log in with a faculty account and store the returned JWT.
 2. Load `/api/faculty/dashboard` for dashboard metrics.
 3. Load `/api/faculty/courses` for the faculty course list and filters.
-4. Load `/api/faculty/courses/:courseId` and `/students` for the detail page.
+4. Load `/api/faculty/courses/:courseId` and `/students?sessionId=...` for each displayed session.
 5. Use the attendance PATCH endpoint when a Present/Absent control changes.
 6. Use the bulk attendance endpoint for “Mark All Present”.
 7. Refetch the affected course or roster after each mutation.
