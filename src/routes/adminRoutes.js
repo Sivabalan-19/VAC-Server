@@ -14,7 +14,6 @@ router.patch('/courses/:courseId/status', adminOnly, controllers.adminUpdateStat
 router.get('/courses/:courseId/students', adminOnly, controllers.adminListRoster);
 router.patch('/courses/:courseId/students/:studentId/attendance', adminOnly, controllers.adminUpdateAttendance);
 router.post('/courses/:courseId/attendance/mark-all-present', adminOnly, controllers.adminMarkAllPresent);
-router.post('/courses/:courseId/award-credits', adminOnly, controllers.adminAwardCredits);
 router.post('/courses/:courseId/students/:studentId/award-credits', adminOnly, controllers.adminAwardStudentCredits);
 
 module.exports = router;

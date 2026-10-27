@@ -156,15 +156,6 @@ async function adminMarkAllPresent(req, res, next) {
 	}
 }
 
-async function adminAwardCredits(req, res, next) {
-	try {
-		const result = await adminService.awardCredits(req.params.courseId);
-		res.json(result);
-	} catch (error) {
-		next(error);
-	}
-}
-
 async function adminAwardStudentCredits(req, res, next) {
 	try {
 		const result = await adminService.awardStudentCredit(req.params.courseId, req.params.studentId);
@@ -262,7 +253,6 @@ module.exports = {
 	adminListRoster,
 	adminUpdateAttendance,
 	adminMarkAllPresent,
-	adminAwardCredits,
 	adminAwardStudentCredits,
 	facultyDashboard,
 	facultyListCourses,

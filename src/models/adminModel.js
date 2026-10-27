@@ -88,11 +88,20 @@ async function findRoster(courseId, sessionId) {
 			a.marked_at AS "markedTime",
 			e.status AS "enrollmentStatus",
 			TO_CHAR(e.completed_at, 'YYYY-MM-DD') AS "completedDate",
-			(e.status = 'Completed') AS "creditsAwarded"
+			(e.status = 'Completed') AS "creditsAwarded",
+			COALESCE(attendance.attendance_percentage, 0)::int AS "attendancePercentage"
 		 FROM course_enrollments e
 		 JOIN users u ON u.id = e.student_id
 		 LEFT JOIN attendance_records a ON a.course_id = e.course_id
 			AND a.student_id = e.student_id AND a.session_id = $2
+		 LEFT JOIN (
+			SELECT course_id, student_id,
+				ROUND(COUNT(*) FILTER (
+					WHERE status = 'Present' AND session_id IN ('d1s1', 'd1s2', 'd2s1', 'd2s2')
+				) * 100.0 / 4)::int AS attendance_percentage
+			FROM attendance_records
+			GROUP BY course_id, student_id
+		 ) attendance ON attendance.course_id = e.course_id AND attendance.student_id = e.student_id
 		 WHERE e.course_id = $1 AND e.status IN ('Registered', 'Completed')
 		 ORDER BY e.created_at, u.full_name`,
 		[courseId, sessionId]
@@ -206,66 +215,6 @@ async function getDashboard() {
 	return rows[0];
 }
 
-async function awardCredits(courseId) {
-	const courseRows = await query(`SELECT id, name, credit FROM courses WHERE id = $1`, [courseId]);
-	if (!courseRows.length) {
-		const error = new Error('Course not found');
-		error.status = 404;
-		throw error;
-	}
-	const course = courseRows[0];
-	const credits = course.credit || 1;
-
-	// Total enrolled students
-	const enrolledRows = await query(
-		`SELECT COUNT(*)::int AS count,
-		        COUNT(*) FILTER (WHERE status = 'Completed')::int AS completed_count
-		 FROM course_enrollments
-		 WHERE course_id = $1 AND status IN ('Registered', 'Completed')`,
-		[courseId]
-	);
-	const totalEnrolled = enrolledRows[0]?.count || 0;
-	const alreadyCompleted = enrolledRows[0]?.completed_count || 0;
-
-	if (totalEnrolled === 0) {
-		return {
-			message: 'No enrolled students found for this course.',
-			awardedCount: 0,
-			totalEnrolled: 0,
-			alreadyAwarded: 0,
-			creditsPerStudent: credits,
-		};
-	}
-
-	// Update only students with status = 'Registered'. This strictly avoids duplicating credits!
-	const updated = await query(
-		`UPDATE course_enrollments
-		 SET status = 'Completed', completed_at = COALESCE(completed_at, CURRENT_DATE)
-		 WHERE course_id = $1 AND status = 'Registered'
-		 RETURNING student_id`,
-		[courseId]
-	);
-
-	const newlyAwarded = updated.length;
-	if (newlyAwarded === 0) {
-		return {
-			message: `Credits (${credits} credits) have already been awarded to all ${totalEnrolled} enrolled student(s). No duplicate credits were added.`,
-			awardedCount: 0,
-			totalEnrolled,
-			alreadyAwarded: alreadyCompleted,
-			creditsPerStudent: credits,
-		};
-	}
-
-	return {
-		message: `Successfully awarded ${credits} credit(s) to ${newlyAwarded} student(s)! (${alreadyCompleted + newlyAwarded}/${totalEnrolled} total students completed)`,
-		awardedCount: newlyAwarded,
-		totalEnrolled,
-		alreadyAwarded: alreadyCompleted + newlyAwarded,
-		creditsPerStudent: credits,
-	};
-}
-
 async function awardStudentCredit(courseId, studentId) {
 	const courseRows = await query(`SELECT id, name, credit FROM courses WHERE id = $1`, [courseId]);
 	if (!courseRows.length) {
@@ -276,12 +225,32 @@ async function awardStudentCredit(courseId, studentId) {
 	const credits = courseRows[0].credit || 1;
 
 	const checkRows = await query(
-		`SELECT status FROM course_enrollments WHERE course_id = $1 AND student_id = $2`,
+		`SELECT e.status,
+			COALESCE(attendance.attendance_percentage, 0)::int AS "attendancePercentage"
+		 FROM course_enrollments e
+		 LEFT JOIN (
+			SELECT course_id, student_id,
+				ROUND(COUNT(*) FILTER (
+					WHERE status = 'Present' AND session_id IN ('d1s1', 'd1s2', 'd2s1', 'd2s2')
+				) * 100.0 / 4)::int AS attendance_percentage
+			FROM attendance_records
+			WHERE course_id = $1 AND student_id = $2
+			GROUP BY course_id, student_id
+		 ) attendance ON attendance.course_id = e.course_id AND attendance.student_id = e.student_id
+		 WHERE e.course_id = $1 AND e.student_id = $2`,
 		[courseId, studentId]
 	);
 	if (!checkRows.length || checkRows[0].status === 'Cancelled') {
 		const error = new Error('Active student enrollment not found');
 		error.status = 404;
+		throw error;
+	}
+
+	if (checkRows[0].attendancePercentage < 50) {
+		const error = new Error(
+			`Student has ${checkRows[0].attendancePercentage}% attendance. At least 50% attendance is required to award credits.`
+		);
+		error.status = 400;
 		throw error;
 	}
 
@@ -308,7 +277,6 @@ async function awardStudentCredit(courseId, studentId) {
 }
 
 module.exports = {
-	awardCredits,
 	awardStudentCredit,
 	createCourse,
 	findCourse,
