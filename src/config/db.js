@@ -1,3 +1,4 @@
+try { require('dns').setDefaultResultOrder('ipv4first'); } catch (_) {}
 const { Pool } = require('pg');
 
 const pool = new Pool({

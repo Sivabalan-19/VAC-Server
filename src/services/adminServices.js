@@ -94,6 +94,8 @@ async function updateAttendance(courseId, studentId, status) {
 }
 
 module.exports = {
+	awardCredits: async (courseId) => adminModel.awardCredits(requireId(courseId, 'courseId')),
+	awardStudentCredit: async (courseId, studentId) => adminModel.awardStudentCredit(requireId(courseId, 'courseId'), requireId(studentId, 'studentId')),
 	createCourse,
 	getCourse,
 	getDashboard: adminModel.getDashboard,

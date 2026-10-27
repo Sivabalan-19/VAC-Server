@@ -6,10 +6,20 @@ async function findAvailableCourses(studentId) {
 			c.code, c.instructor, c.department, c.course_type AS type, c.mode, c.credit, c.organizer,
 			c.location,
 			c.capacity - COUNT(e.id) FILTER (WHERE e.status IN ('Registered', 'Completed')) AS available,
-			c.details
+			c.details,
+			c.status_text AS "statusText"
 		 FROM courses c
 		 LEFT JOIN course_enrollments e ON e.course_id = c.id
-		 WHERE NOT EXISTS (
+		 WHERE (
+			 c.status_text ILIKE '%Approved%'
+			 OR c.status_text ILIKE '%Ready For Registration%'
+			 OR c.status_text ILIKE '%Attendance Opened%'
+			 OR c.status_text ILIKE '%Opened%'
+		 )
+		 AND c.status_text NOT ILIKE '%Pending%'
+		 AND c.status_text NOT ILIKE '%Reject%'
+		 AND c.status_text NOT ILIKE '%Completed%'
+		 AND NOT EXISTS (
 			 SELECT 1 FROM course_enrollments own
 			 WHERE own.course_id = c.id AND own.student_id = $1 AND own.status <> 'Cancelled'
 		 )
@@ -56,6 +66,15 @@ async function registerForCourse(studentId, courseId) {
 		`INSERT INTO course_enrollments (student_id, course_id)
 		 SELECT $1, c.id FROM courses c
 		 WHERE c.id = $2
+		 AND (
+			 c.status_text ILIKE '%Approved%'
+			 OR c.status_text ILIKE '%Ready For Registration%'
+			 OR c.status_text ILIKE '%Attendance Opened%'
+			 OR c.status_text ILIKE '%Opened%'
+		 )
+		 AND c.status_text NOT ILIKE '%Pending%'
+		 AND c.status_text NOT ILIKE '%Reject%'
+		 AND c.status_text NOT ILIKE '%Completed%'
 		 AND c.capacity > (
 			 SELECT COUNT(*) FROM course_enrollments e
 			 WHERE e.course_id = c.id AND e.status IN ('Registered', 'Completed')

@@ -151,6 +151,24 @@ async function adminMarkAllPresent(req, res, next) {
 	}
 }
 
+async function adminAwardCredits(req, res, next) {
+	try {
+		const result = await adminService.awardCredits(req.params.courseId);
+		res.json(result);
+	} catch (error) {
+		next(error);
+	}
+}
+
+async function adminAwardStudentCredits(req, res, next) {
+	try {
+		const result = await adminService.awardStudentCredit(req.params.courseId, req.params.studentId);
+		res.json(result);
+	} catch (error) {
+		next(error);
+	}
+}
+
 async function facultyDashboard(req, res, next) {
 	try {
 		res.json({ dashboard: await adminService.getDashboard() });
@@ -177,7 +195,14 @@ async function facultyGetCourse(req, res, next) {
 
 async function facultyCreateCourse(req, res, next) {
 	try {
-		res.status(201).json({ message: 'Course proposal created successfully', course: await adminService.createCourse(req.body) });
+		const courseData = {
+			...req.body,
+			statusText: 'Approval Pending...',
+		};
+		res.status(201).json({
+			message: 'Course proposal created successfully and submitted to admin for approval',
+			course: await adminService.createCourse(courseData),
+		});
 	} catch (error) {
 		next(error);
 	}
@@ -227,6 +252,8 @@ module.exports = {
 	adminListRoster,
 	adminUpdateAttendance,
 	adminMarkAllPresent,
+	adminAwardCredits,
+	adminAwardStudentCredits,
 	facultyDashboard,
 	facultyListCourses,
 	facultyGetCourse,
