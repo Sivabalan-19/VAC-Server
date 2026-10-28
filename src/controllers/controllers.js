@@ -127,7 +127,7 @@ async function adminUpdateStatus(req, res, next) {
 
 async function adminListRoster(req, res, next) {
 	try {
-		res.json({ students: await adminService.listRoster(req.params.courseId, 'd1s1') });
+		res.json({ students: await adminService.listRoster(req.params.courseId, req.query.sessionId || 'd1s1') });
 	} catch (error) {
 		next(error);
 	}
